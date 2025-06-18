@@ -8,10 +8,13 @@ use russh::{
     Error as SshError,
 };
 
+use crate::ssh::auth::AuthLog;
+
 #[derive(Clone)]
 pub struct SshServer {
     pub clients: Arc<Mutex<HashMap<usize, (ChannelId, Handle)>>>,
     pub id: usize,
+    pub auth_log: Arc<AuthLog>
 }
 
 impl SshServer {
@@ -19,6 +22,7 @@ impl SshServer {
         Self {
             clients: Arc::new(Mutex::new(HashMap::new())),
             id: 0,
+            auth_log: Arc::new(AuthLog::new())
         }
     }
 
@@ -56,24 +60,13 @@ impl server::Server for SshServer {
 impl server::Handler for SshServer {
     type Error = russh::Error;
 
-    async fn channel_open_session(
-        &mut self,
-        channel: Channel<Msg>,
-        session: &mut Session,
-    ) -> Result<bool, Self::Error> {
-        {
-            let mut clients = self.clients.lock().await;
-            clients.insert(self.id, (channel.id(), session.handle()));
-        }
-        Ok(true)
-    }
-
     async fn auth_publickey(
         &mut self,
-        first: &str,
+        username: &str,
         key: &PublicKey,
     ) -> Result<Auth, Self::Error> {
-        log::info!("first: {:?}, key: {:?}", first, key);
+        log::info!("username: {:?}, key: {:?}", username, key);
+        self.auth_log.record_key(username, key).await;
         Ok(Auth::Accept)
     }
 
@@ -83,6 +76,21 @@ impl server::Handler for SshServer {
         _certificate: &Certificate,
     ) -> Result<Auth, Self::Error> {
         Ok(Auth::Accept)
+    }
+
+    async fn channel_open_session(
+        &mut self,
+        channel: Channel<Msg>,
+        session: &mut Session,
+    ) -> Result<bool, Self::Error> {
+        {
+            let mut clients = self.clients.lock().await;
+            clients.insert(self.id, (channel.id(), session.handle()));
+        }
+        let all_entries = self.auth_log.all_entries().await;
+        log::info!("All Entries: {:?}", all_entries);
+        log::debug!("channel: {:?}, session: {:?}", channel, session);
+        Ok(true)
     }
 
     async fn data(
