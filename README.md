@@ -13,12 +13,16 @@ library. The server is minimal and supports:
 Ensure Rust is installed (`rustup` recommended), then:
 
 ```bash
-RUST_LOG=debug cargo run
+cargo run
 ```
 
 This will start the SSH server on:
 ```0.0.0.0:2222```
 
 This project uses `env_logger` for debug output. Set the log level via the
-`$RUST_LOG` environment variable.
-
+filter_level: 
+```rs
+env_logger::builder()
+    .filter_level(log::LevelFilter::Debug)
+    .init();
+```

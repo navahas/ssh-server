@@ -70,9 +70,10 @@ impl server::Handler for SshServer {
 
     async fn auth_publickey(
         &mut self,
-        _: &str,
-        _key: &PublicKey,
+        first: &str,
+        key: &PublicKey,
     ) -> Result<Auth, Self::Error> {
+        log::info!("first: {:?}, key: {:?}", first, key);
         Ok(Auth::Accept)
     }
 

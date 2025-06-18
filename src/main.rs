@@ -11,7 +11,7 @@ async fn main() {
     let port: u16 = 2222;
 
     env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Info)
         .init();
 
     let config = server::Config {
